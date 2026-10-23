@@ -1,4 +1,7 @@
-use crate::{key::SecretKey, model::{Category, Confidence, Finding, FindingState, Location, Severity}};
+use crate::{
+    key::SecretKey,
+    model::{Category, Confidence, Finding, FindingState, Location, Severity},
+};
 
 pub mod metadata;
 pub mod text;
@@ -15,8 +18,14 @@ pub struct Rule {
 
 macro_rules! rule {
     ($id:literal, $category:ident, $severity:ident, $confidence:ident, $title:literal, $fix:literal) => {
-        Rule { id: $id, category: Category::$category, severity: Severity::$severity,
-            confidence: Confidence::$confidence, title: $title, recommendation: $fix }
+        Rule {
+            id: $id,
+            category: Category::$category,
+            severity: Severity::$severity,
+            confidence: Confidence::$confidence,
+            title: $title,
+            recommendation: $fix,
+        }
     };
 }
 
@@ -83,12 +92,26 @@ impl Surface<'_> {
         // Only internal, catalogued rule IDs may call this function.
         let rule = RULES.iter().find(|rule| rule.id == rule_id);
         let (category, severity, confidence, title, recommendation) = match rule {
-            Some(rule) => (rule.category, rule.severity, rule.confidence, rule.title, rule.recommendation),
-            None => (Category::Configuration, Severity::Info, Confidence::Low,
-                "Unknown internal rule", "Report this internal error to the maintainers."),
+            Some(rule) => (
+                rule.category,
+                rule.severity,
+                rule.confidence,
+                rule.title,
+                rule.recommendation,
+            ),
+            None => (
+                Category::Configuration,
+                Severity::Info,
+                Confidence::Low,
+                "Unknown internal rule",
+                "Report this internal error to the maintainers.",
+            ),
         };
         Finding {
-            id: self.key.fingerprint("finding", &[rule_id.as_bytes(), self.file_id.as_bytes(), token]),
+            id: self.key.fingerprint(
+                "finding",
+                &[rule_id.as_bytes(), self.file_id.as_bytes(), token],
+            ),
             rule_id: rule_id.into(),
             category,
             severity,

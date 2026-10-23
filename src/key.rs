@@ -1,6 +1,10 @@
 use anyhow::{bail, Context, Result};
 use rand::{rngs::OsRng, RngCore};
-use std::{fs::OpenOptions, io::{Read, Write}, path::Path};
+use std::{
+    fs::OpenOptions,
+    io::{Read, Write},
+    path::Path,
+};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Zeroize, ZeroizeOnDrop)]
@@ -61,7 +65,9 @@ impl SecretKey {
             use std::os::unix::fs::OpenOptionsExt;
             options.mode(0o600);
         }
-        let mut file = options.open(path).context("cannot create key; destination must not exist")?;
+        let mut file = options
+            .open(path)
+            .context("cannot create key; destination must not exist")?;
         // On Windows, protect the EMPTY file before writing any key material.
         #[cfg(windows)]
         if let Err(error) = protect_windows_key(path) {
@@ -69,7 +75,11 @@ impl SecretKey {
             let _ = std::fs::remove_file(path);
             return Err(error);
         }
-        if file.write_all(&key.0).and_then(|_| file.sync_all()).is_err() {
+        if file
+            .write_all(&key.0)
+            .and_then(|_| file.sync_all())
+            .is_err()
+        {
             drop(file);
             let _ = std::fs::remove_file(path);
             bail!("key write failed; partial file removed when possible");
@@ -118,9 +128,14 @@ fn protect_windows_key(path: &Path) -> Result<()> {
         bail!("Windows identity lookup failed");
     }
     let text = String::from_utf8_lossy(&identity.stdout);
-    let sid = text.split('"').find(|s| {
-        s.starts_with("S-1-") && s.bytes().all(|b| b.is_ascii_digit() || b == b'S' || b == b'-')
-    }).context("Windows identity did not return a valid SID")?;
+    let sid = text
+        .split('"')
+        .find(|s| {
+            s.starts_with("S-1-")
+                && s.bytes()
+                    .all(|b| b.is_ascii_digit() || b == b'S' || b == b'-')
+        })
+        .context("Windows identity did not return a valid SID")?;
     let result = Command::new(crate::windows::system_executable("icacls.exe")?)
         .arg(path)
         .args(["/inheritance:r", "/grant:r"])

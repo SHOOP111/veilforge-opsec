@@ -1,16 +1,24 @@
-use crate::{detectors::catalog, model::{FindingState, Report, Severity}};
+use crate::{
+    detectors::catalog,
+    model::{FindingState, Report, Severity},
+};
 use anyhow::Result;
 use serde_json::{json, Value};
 
 pub fn render(report: &Report) -> Result<String> {
-    let rules: Vec<Value> = catalog().iter().map(|r| json!({
-        "id": r.id,
-        "name": r.id,
-        "shortDescription": {"text": r.title},
-        "fullDescription": {"text": r.recommendation},
-        "defaultConfiguration": {"level": level(r.severity)},
-        "properties": {"tags": ["security", "privacy", "opsec"], "precision": "medium"}
-    })).collect();
+    let rules: Vec<Value> = catalog()
+        .iter()
+        .map(|r| {
+            json!({
+                "id": r.id,
+                "name": r.id,
+                "shortDescription": {"text": r.title},
+                "fullDescription": {"text": r.recommendation},
+                "defaultConfiguration": {"level": level(r.severity)},
+                "properties": {"tags": ["security", "privacy", "opsec"], "precision": "medium"}
+            })
+        })
+        .collect();
     let results: Vec<Value> = report.findings.iter().map(|finding| {
         let mut value = json!({
             "ruleId": finding.rule_id,
@@ -40,10 +48,16 @@ pub fn render(report: &Report) -> Result<String> {
         }
         value
     }).collect();
-    let notifications: Vec<Value> = report.coverage.iter().map(|issue| json!({
-        "descriptor": {"id": issue.code}, "level": "warning",
-        "message": {"text": format!("{} ({} entries)", issue.message, issue.count)}
-    })).collect();
+    let notifications: Vec<Value> = report
+        .coverage
+        .iter()
+        .map(|issue| {
+            json!({
+                "descriptor": {"id": issue.code}, "level": "warning",
+                "message": {"text": format!("{} ({} entries)", issue.message, issue.count)}
+            })
+        })
+        .collect();
     let document = json!({
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",

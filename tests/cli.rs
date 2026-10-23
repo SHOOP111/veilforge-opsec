@@ -13,8 +13,16 @@ fn cli_produces_reports_and_expected_exit_codes() -> Result<()> {
     let json = outputs.path().join("report.json");
     let sarif = outputs.path().join("report.sarif");
     let html = outputs.path().join("report.html");
-    let audit = Command::new(binary).arg("scan").arg(root.path())
-        .arg("--json").arg(&json).arg("--sarif").arg(&sarif).arg("--html").arg(&html).output()?;
+    let audit = Command::new(binary)
+        .arg("scan")
+        .arg(root.path())
+        .arg("--json")
+        .arg(&json)
+        .arg("--sarif")
+        .arg(&sarif)
+        .arg("--html")
+        .arg(&html)
+        .output()?;
     assert_eq!(audit.status.code(), Some(2));
     let report: serde_json::Value = serde_json::from_slice(&fs::read(&json)?)?;
     assert_eq!(report["findings"][0]["rule_id"], "config.tls-bypass");
@@ -22,7 +30,12 @@ fn cli_produces_reports_and_expected_exit_codes() -> Result<()> {
     assert!(fs::read_to_string(html)?.contains("VeilForge"));
     let sarif: serde_json::Value = serde_json::from_slice(&fs::read(sarif)?)?;
     assert_eq!(sarif["version"], "2.1.0");
-    let repeat = Command::new(binary).arg("scan").arg(root.path()).arg("--json").arg(&json).output()?;
+    let repeat = Command::new(binary)
+        .arg("scan")
+        .arg(root.path())
+        .arg("--json")
+        .arg(&json)
+        .output()?;
     assert_eq!(repeat.status.code(), Some(1));
     fs::write(root.path().join("opaque.bin"), [0, 1, 0])?;
     let incomplete = Command::new(binary).arg("scan").arg(root.path()).output()?;

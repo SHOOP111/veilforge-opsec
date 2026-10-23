@@ -44,7 +44,8 @@ impl Policy {
         }
         let text = std::str::from_utf8(&bytes).context("policy must be UTF-8")?;
         // Parser details may echo policy text; keep CLI errors content-free.
-        let policy: Self = toml::from_str(text).map_err(|_| anyhow::anyhow!("invalid policy TOML"))?;
+        let policy: Self =
+            toml::from_str(text).map_err(|_| anyhow::anyhow!("invalid policy TOML"))?;
         policy.validate()?;
         Ok(policy)
     }
@@ -89,7 +90,10 @@ impl Policy {
             if self.suppress.iter().any(|entry| {
                 entry.expires >= today
                     && entry.rule_id == finding.rule_id
-                    && entry.file_id.as_ref().is_none_or(|id| finding.file_id.as_ref() == Some(id))
+                    && entry
+                        .file_id
+                        .as_ref()
+                        .is_none_or(|id| finding.file_id.as_ref() == Some(id))
             }) {
                 finding.state = FindingState::Suppressed;
             }
@@ -101,10 +105,15 @@ impl Policy {
     }
 
     pub fn digest(&self) -> Result<String> {
-        Ok(blake3::hash(&serde_json::to_vec(self)?).to_hex().to_string())
+        Ok(blake3::hash(&serde_json::to_vec(self)?)
+            .to_hex()
+            .to_string())
     }
 }
 
 pub(crate) fn valid_id(id: &str) -> bool {
-    id.len() == 64 && id.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    id.len() == 64
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }

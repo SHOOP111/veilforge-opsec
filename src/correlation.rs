@@ -1,8 +1,14 @@
-use crate::{key::SecretKey, model::{Category, ExposureChain, Finding, FindingState, Severity}};
+use crate::{
+    key::SecretKey,
+    model::{Category, ExposureChain, Finding, FindingState, Severity},
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn build(findings: &[Finding], key: &SecretKey) -> Vec<ExposureChain> {
-    let active: Vec<&Finding> = findings.iter().filter(|f| f.state == FindingState::Active).collect();
+    let active: Vec<&Finding> = findings
+        .iter()
+        .filter(|f| f.state == FindingState::Active)
+        .collect();
     let mut chains = Vec::new();
     let mut by_entity: BTreeMap<&str, Vec<&Finding>> = BTreeMap::new();
     let mut by_file: BTreeMap<&str, Vec<&Finding>> = BTreeMap::new();
@@ -55,13 +61,24 @@ pub fn build(findings: &[Finding], key: &SecretKey) -> Vec<ExposureChain> {
     chains
 }
 
-fn chain(key: &SecretKey, kind: &str, title: &str, severity: Severity, findings: &[&Finding], explanation: &str, recommendation: &str) -> ExposureChain {
+fn chain(
+    key: &SecretKey,
+    kind: &str,
+    title: &str,
+    severity: Severity,
+    findings: &[&Finding],
+    explanation: &str,
+    recommendation: &str,
+) -> ExposureChain {
     let ids: BTreeSet<String> = findings.iter().map(|f| f.id.clone()).collect();
     let finding_ids: Vec<String> = ids.into_iter().collect();
     let joined = finding_ids.join(":");
     ExposureChain {
         id: key.fingerprint("chain", &[kind.as_bytes(), joined.as_bytes()]),
-        title: title.into(), severity, finding_ids,
-        explanation: explanation.into(), recommendation: recommendation.into(),
+        title: title.into(),
+        severity,
+        finding_ids,
+        explanation: explanation.into(),
+        recommendation: recommendation.into(),
     }
 }
