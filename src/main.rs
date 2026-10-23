@@ -25,7 +25,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Audit local artifacts; optional read-only Windows posture snapshot.
-    Scan(ScanArgs),
+    Scan(Box<ScanArgs>),
     /// Create a persistent 32-byte fingerprint key; never overwrites.
     Keygen {
         #[arg(long)]
@@ -104,7 +104,7 @@ fn main() -> std::process::ExitCode {
 
 fn run(cli: Cli) -> Result<i32> {
     match cli.command {
-        Command::Scan(args) => run_scan(args),
+        Command::Scan(args) => run_scan(*args),
         Command::Keygen { out } => {
             SecretKey::create(&out)?;
             println!(
