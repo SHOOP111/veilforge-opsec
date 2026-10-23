@@ -424,13 +424,14 @@ pub fn normalized_path(path: &Path) -> String {
 
 fn decode_text(bytes: &[u8]) -> Option<Zeroizing<String>> {
     if bytes.starts_with(b"\xff\xfe") || bytes.starts_with(b"\xfe\xff") {
-        if bytes.len() % 2 != 0 {
+        let (pairs, remainder) = bytes[2..].as_chunks::<2>();
+        if !remainder.is_empty() {
             return None;
         }
         let little = bytes.starts_with(b"\xff\xfe");
         let units = Zeroizing::new(
-            bytes[2..]
-                .chunks_exact(2)
+            pairs
+                .iter()
                 .map(|b| {
                     if little {
                         u16::from_le_bytes([b[0], b[1]])
