@@ -1,0 +1,12 @@
+/target/
+/dist/
+/.veilforge/
+*.key
+*.vfkey
+*.sarif
+/report*.json
+/report*.html
+/baseline*.json
+*.tmp
+.DS_Store
+Thumbs.db

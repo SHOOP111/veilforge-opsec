@@ -1,0 +1,37 @@
+name: Remote source maintenance
+
+# Explicitly invoked by the repository owner. Does not scan or run on a local PC.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: source-maintenance
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install formatter
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
+      - name: Generate lockfile and format source remotely
+        run: |
+          cargo generate-lockfile
+          cargo fmt --all
+      - name: Commit only lockfile and Rust formatting
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Cargo.lock src/ tests/
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: lock dependencies and format Rust remotely [skip ci]'
+            git push origin HEAD:main
+          fi

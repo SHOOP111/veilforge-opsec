@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  verify:
+    name: Important invariants (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install stable Rust and quality tools
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy --component rustfmt
+          rustup default stable
+      - name: Cache dependencies and build products
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: veilforge-${{ runner.os }}-stable-${{ hashFiles('Cargo.lock') }}
+      - name: Formatting (Linux only)
+        if: runner.os == 'Linux'
+        run: cargo fmt --all -- --check
+      - name: Compile and run only the critical invariant and CLI tests
+        run: cargo test --locked --all-targets
+      - name: Static correctness checks
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  dependencies:
+    name: Dependency security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install dependency policy checker
+        run: cargo install cargo-deny --locked
+      - name: Check advisories, licenses, and registry sources
+        run: cargo deny check advisories licenses sources

@@ -1,0 +1,19 @@
+# VeilForge policy v1. Unknown keys are rejected. Values are lowercase.
+version = 1
+fail_on = "high"
+
+# Exclusions are explicit coverage choices, not proof that these files are safe.
+# Built-in directory exclusions: target, node_modules, .veilforge, .venv, venv, __pycache__.
+# .git is intentionally NOT excluded, so credentials in Git configuration can be detected.
+exclude = []
+
+# Suppressions expire at the end of the UTC date. Expired entries are ignored and
+# produce a coverage warning (exit 3). Without file_id, a suppression applies globally.
+# Keep the fingerprint key constant to preserve file IDs. Reasons are required but
+# intentionally never copied into reports; do not place secrets in policy files.
+#
+# [[suppress]]
+# rule_id = "metadata.identity"
+# file_id = "<64-character lowercase file_id from a JSON report>"
+# expires = "2030-01-01"
+# reason = "Reviewed intentional publisher attribution"

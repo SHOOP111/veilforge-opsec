@@ -1,0 +1,95 @@
+name: Release binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v-prefixed release tag, for example v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: veilforge-windows-x86_64.zip
+            binary: target/release/veilforge.exe
+          - os: ubuntu-latest
+            asset: veilforge-linux-x86_64.tar.gz
+            binary: target/release/veilforge
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Validate tag
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Verify and build optimized binary (GitHub runner only)
+        run: |
+          cargo test --locked --all-targets
+          cargo build --locked --release
+      - name: Package Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ASSET: ${{ matrix.asset }}
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item target/release/veilforge.exe dist/
+          Copy-Item README.md,LICENSE-MIT,LICENSE-APACHE dist/
+          Compress-Archive -Path dist/* -DestinationPath $env:ASSET
+          $hash = (Get-FileHash $env:ASSET -Algorithm SHA256).Hash.ToLower()
+          "$hash  $env:ASSET" | Set-Content -Encoding ascii "$env:ASSET.sha256"
+      - name: Package Linux binary
+        if: runner.os == 'Linux'
+        env:
+          ASSET: ${{ matrix.asset }}
+        run: |
+          mkdir dist
+          cp target/release/veilforge README.md LICENSE-MIT LICENSE-APACHE dist/
+          tar -czf "$ASSET" -C dist .
+          sha256sum "$ASSET" > "$ASSET.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.os }}
+          path: |
+            ${{ matrix.asset }}
+            ${{ matrix.asset }}.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create release with checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh release create "$TAG" --verify-tag --title "VeilForge $TAG" --generate-notes artifacts/*
