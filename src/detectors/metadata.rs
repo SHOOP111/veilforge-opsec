@@ -113,9 +113,13 @@ impl MetadataDetector {
             result.incomplete = true;
             return Ok(result);
         }
-        let macro_found = archive
-            .file_names()
-            .any(|name| name.to_ascii_lowercase().ends_with("vbaproject.bin"));
+        let mut macro_found = false;
+        for name in archive.file_names() {
+            match name {
+                Ok(name) => macro_found |= name.to_ascii_lowercase().ends_with("vbaproject.bin"),
+                Err(_) => result.incomplete = true,
+            }
+        }
         if macro_found {
             result.findings.push(surface.finding(
                 "metadata.active-content",
@@ -188,10 +192,10 @@ impl MetadataDetector {
             ));
         }
         // Relationships outside the bounded member allowlist are not inspected.
-        result.incomplete = archive
-            .file_names()
-            .any(|name| name.ends_with(".rels") && !MEMBERS.contains(&name))
-            || result.incomplete;
+        result.incomplete = archive.file_names().any(|name| match name {
+            Ok(name) => name.ends_with(".rels") && !MEMBERS.contains(&name.as_ref()),
+            Err(_) => true,
+        }) || result.incomplete;
         Ok(result)
     }
 }
